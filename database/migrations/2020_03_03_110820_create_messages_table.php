@@ -17,7 +17,6 @@ class CreateMessagesTable extends Migration
             $table->bigIncrements('id');
             $table->bigInteger('from');
             $table->bigInteger('to');
-            $table->unsignedInteger('user_id');
             $table->text('message');
             $table->tinyInteger('is_read');
             $table->timestamps();

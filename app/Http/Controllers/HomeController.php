@@ -35,4 +35,51 @@ class HomeController extends Controller
         return view('home', ['users' => $users]);
 
     }
+    public function getMessage($user_id)
+    {
+        $my_id = Auth::id();
+
+        // Make read all unread message
+        Messages::where(['from' => $user_id, 'to' => $my_id])->update(['is_read' => 1]);
+
+        // Get all message from selected user
+        $messages = Messages::where(function ($query) use ($user_id, $my_id) {
+            $query->where('from', $user_id)->where('to', $my_id);
+        })->oRwhere(function ($query) use ($user_id, $my_id) {
+            $query->where('from', $my_id)->where('to', $user_id);
+        })->get();
+
+        return view('messages.index', ['messages' => $messages]);
+    }
+
+    public function sendMessage(Request $request)
+    {
+        $from = Auth::id();
+        $to = $request->receiver_id;
+        $message = $request->message;
+
+        $data = new Messages();
+        $data->from = $from;
+        $data->to = $to;
+        $data->message = $message;
+        $data->is_read = 0; // message will be unread when sending message
+        $data->save();
+
+        // pusher
+        $options = array(
+            'cluster' => 'eu',
+            'useTLS' => true
+        );
+
+        $pusher = new Pusher(
+            env('PUSHER_APP_KEY'),
+            env('PUSHER_APP_SECRET'),
+            env('PUSHER_APP_ID'),
+            $options
+        );
+
+        $data = ['from' => $from, 'to' => $to]; // sending from and to user id when pressed enter
+        $pusher->trigger('my-channel', 'my-event', $data);
+    }
+
 }
